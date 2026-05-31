@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Clone v10.4.9</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --bg: #0c0c0e;
+            --surface: #141416;
+            --surface-elevated: #1c1c20;
+            --border: #28282e;
+            --fg: #e8e8ec;
+            --muted: #6e6e78;
+            --accent: #00e896;
+            --accent-hover: #00cc82;
+            --accent-dim: rgba(0,232,150,0.08);
+            --accent-glow: rgba(0,232,150,0.25);
+            --danger: #ff4757;
+            --warning: #ffa502;
+            --card: #18181c;
+            --radius: 8px;
+            --radius-sm: 5px;
+        }
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--fg);height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+        ::-webkit-scrollbar{width:5px;}
+        ::-webkit-scrollbar-track{background:transparent;}
+        ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+        ::-webkit-scrollbar-thumb:hover{background:var(--muted);}
+
+        /* ── Tab Bar ── */
+        .tab-bar{display:flex;align-items:flex-end;background:var(--bg);border-bottom:1px solid var(--border);padding:6px 8px 0;gap:2px;user-select:none;flex-shrink:0;}
+        .tab{display:flex;align-items:center;gap:7px;padding:8px 16px;font-size:13px;font-weight:500;color:var(--muted);background:transparent;border:1px solid transparent;border-bottom:none;border-radius:var(--radius) var(--radius) 0 0;cursor:pointer;transition:all .2s;position:relative;}
+        .tab:hover{color:var(--fg);background:var(--surface);}
+        .tab.active{color:var(--fg);background:var(--surface);border-color:var(--border);}
+        .tab.active::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;background:var(--accent);}
+        .tab .ti{font-size:12px;opacity:.7;}
+        .tab-add{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:var(--radius-sm);color:var(--muted);cursor:pointer;transition:all .15s;margin-bottom:4px;font-size:13px;}
+        .tab-add:hover{background:var(--surface);color:var(--fg);}
+
+        /* ── Toolbar ── */
+        .toolbar{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
+        .nav-btn{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:var(--radius-sm);color:var(--muted);cursor:pointer;transition:all .15s;border:none;background:none;font-size:13px;}
+        .nav-btn:hover{background:var(--surface-elevated);color:var(--fg);}
+        .nav-btn:active{transform:scale(.92);}
+        .nav-btn.disabled{opacity:.25;pointer-events:none;}
+        .url-bar{flex:1;display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:0 14px;height:32px;transition:all .2s;}
+        .url-bar:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-dim);}
+        .url-bar .ui{color:var(--muted);font-size:12px;flex-shrink:0;}
+        .url-bar .ui.secure{color:var(--accent);}
+        .url-bar input{flex:1;border:none;background:none;color:var(--fg);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none;}
+        .url-bar input::placeholder{color:var(--muted);}
+        .go-btn{display:flex;align-items:center;justify-content:center;padding:0 16px;height:32px;border-radius:20px;background:var(--accent);color:var(--bg);font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:all .2s;}
+        .go-btn:hover{background:var(--accent-hover);transform:scale(1.03);}
+        .go-btn:active{transform:scale(.97);}
+
+        /* ── Main Container ── */
+        .main-container{flex:1;display:flex;overflow:hidden;position:relative;}
+
+        /* ── Sidebar ── */
+        .sidebar{width:256px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:width .3s ease;flex-shrink:0;}
+        .sidebar.collapsed{width:0;border-right:none;}
+        .sidebar-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);}
+        .sidebar-header .ts{cursor:pointer;padding:4px;border-radius:4px;transition:all .15s;}
+        .sidebar-header .ts:hover{background:var(--surface-elevated);color:var(--fg);}
+        .file-tree{flex:1;overflow-y:auto;padding:6px 0;}
+        .fi{display:flex;align-items:center;gap:8px;padding:4px 14px;font-size:11.5px;color:var(--muted);cursor:pointer;transition:all .12s;font-family:'JetBrains Mono',monospace;white-space:nowrap;}
+        .fi:hover{background:var(--surface-elevated);color:var(--fg);}
+        .fi.active{background:var(--accent-dim);color:var(--accent);}
+        .fi .fic{width:15px;text-align:center;font-size:10px;flex-shrink:0;}
+        .fi .fic.html{color:#ff6b35;} .fi .fic.css{color:#42a5f5;} .fi .fic.js{color:#ffd740;}
+        .fi .fic.tsx{color:#00bcd4;} .fi .fic.json{color:#66bb6a;} .fi .fic.xml{color:#ef5350;}
+        .fi .fic.py{color:#ab47bc;} .fi .fic.dex{color:#7e57c2;} .fi .fic.folder{color:#ffa726;}
+        .fi .fic.default{color:var(--muted);}
+        .fc{overflow:hidden;transition:max-height .3s ease;}
+        .fc.col{max-height:0!important;}
+        .fi .chev{margin-left:auto;font-size:8px;color:var(--muted);transition:transform .2s;}
+
+        /* ── Content Area ── */
+        .content-area{flex:1;overflow:hidden;position:relative;}
+        .page{position:absolute;inset:0;overflow-y:auto;opacity:0;pointer-events:none;transition:opacity .22s ease;}
+        .page.active{opacity:1;pointer-events:all;}
+
+        /* ── Index Page ── */
+        .idx{padding:40px 48px;position:relative;}
+        .idx-canvas{position:absolute;inset:0;pointer-events:none;opacity:.35;}
+        .idx-hero{text-align:center;margin-bottom:52px;position:relative;z-index:1;}
+        .idx-hero::before{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:340px;height:340px;background:radial-gradient(circle,var(--accent-dim) 0%,transparent 70%);border-radius:50%;pointer-events:none;filter:blur(40px);}
+        .idx-hero h1{font-size:52px;font-weight:700;letter-spacing:-2px;margin-bottom:6px;position:relative;}
+        .idx-hero h1 span{color:var(--accent);}
+        .idx-hero .ver{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted);margin-bottom:14px;display:inline-block;padding:3px 12px;border:1px solid var(--border);border-radius:20px;}
+        .idx-hero .sub{font-size:16px;color:var(--muted);font-weight:300;}
+        .sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:40px;position:relative;z-index:1;}
+        .sc{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;transition:all .3s;border-left:3px solid transparent;}
+        .sc:hover{border-left-color:var(--accent);transform:translateY(-3px);box-shadow:0 10px 30px rgba(0,232,150,.06);}
+        .sc .sv{font-size:34px;font-weight:700;color:var(--accent);margin-bottom:2px;}
+        .sc .sl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;}
+        .idx-files{position:relative;z-index:1;margin-top:12px;}
+        .idx-files h3{font-size:14px;font-weight:600;margin-bottom:14px;color:var(--muted);}
+        .chip-grid{display:flex;flex-wrap:wrap;gap:6px;}
+        .chip{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:var(--surface-elevated);border:1px solid var(--border);border-radius:16px;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--muted);cursor:default;transition:all .2s;}
+        .chip:hover{border-color:var(--accent);color:var(--fg);background:var(--accent-dim);}
+        .chip i{font-size:9px;}
+
+        /* ── Home Page (Browser) ── */
+        .hpg{display:flex;flex-direction:column;height:100%;}
+        .bc{flex:1;position:relative;background:#0e0e10;}
+        .bc iframe{width:100%;height:100%;border:none;background:#fff;}
+        .bd{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;padding:40px;}
+        .bl{width:76px;height:76px;border-radius:18px;background:linear-gradient(135deg,var(--accent) 0%,#00b877 100%);display:flex;align-items:center;justify-content:center;font-size:34px;color:var(--bg);margin-bottom:24px;box-shadow:0 14px 44px rgba(0,232,150,.2);animation:bfloat 3.5s ease-in-out infinite;}
+        @keyframes bfloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+        .bd h2{font-size:26px;font-weight:700;margin-bottom:6px;}
+        .bd h2 span{color:var(--accent);}
+        .bd .tl{color:var(--muted);font-size:14px;margin-bottom:28px;}
+        .ql{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+        .qli{display:flex;align-items:center;gap:7px;padding:9px 16px;background:var(--card);border:1px solid var(--border);border-radius:22px;color:var(--fg);font-size:12.5px;cursor:pointer;transition:all .2s;}
+        .qli:hover{border-color:var(--accent);background:var(--accent-dim);transform:translateY(-2px);}
+        .qli .qi{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;}
+        .lb{position:absolute;top:0;left:0;height:2px;background:var(--accent);transition:width .3s ease;z-index:10;box-shadow:0 0 8px var(--accent-glow);}
+
+        /* ── Settings Page ── */
+        .spg{padding:40px 48px;max-width:660px;}
+        .spg h2{font-size:28px;font-weight:700;margin-bottom:6px;}
+        .spg .sd{color:var(--muted);font-size:14px;margin-bottom:32px;}
+        .sg2{margin-bottom:20px;}
+        .sg2t{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+        .si{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);}
+        .si:last-child{border-bottom:none;}
+        .sinfo{display:flex;align-items:center;gap:12px;}
+        .sicon{width:36px;height:36px;border-radius:var(--radius-sm);background:var(--surface-elevated);display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:14px;transition:all .3s;}
+        .si:hover .sicon{background:var(--accent-dim);}
+        .slabel{font-size:14px;font-weight:500;}
+        .ssub{font-size:11.5px;color:var(--muted);margin-top:2px;}
+        .toggle{position:relative;width:44px;height:24px;cursor:pointer;flex-shrink:0;}
+        .toggle input{display:none;}
+        .toggle .sl2{position:absolute;inset:0;background:var(--border);border-radius:12px;transition:all .3s ease;}
+        .toggle .sl2::before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:var(--fg);border-radius:50%;transition:all .3s ease;}
+        .toggle input:checked+.sl2{background:var(--accent);}
+        .toggle input:checked+.sl2::before{transform:translateX(20px);background:var(--bg);}
+
+        /* ── Status Bar ── */
+        .sbar{display:flex;align-items:center;justify-content:space-between;padding:3px 14px;background:var(--surface);border-top:1px solid var(--border);font-size:10.5px;color:var(--muted);font-family:'JetBrains Mono',monospace;flex-shrink:0;}
+        .sbar .sl3,.sbar .sr{display:flex;align-items:center;gap:10px;}
+        .sdot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pdot 2s infinite;}
+        @keyframes pdot{0%,100%{opacity:1}50%{opacity:.35}}
+
+        /* ── Toast ── */
+        .tc{position:fixed;top:14px;right:14px;z-index:1000;display:flex;flex-direction:column;gap:8px;}
+        .toast{background:var(--surface-elevated);border:1px solid var(--border);border-radius:var(--radius);padding:10px 16px;font-size:12.5px;color:var(--fg);display:flex;align-items:center;gap:9px;animation:tIn .3s ease;box-shadow:0 8px 28px rgba(0,0,0,.4);}
+        .toast.success .tti{color:var(--accent);} .toast.error .tti{color:var(--danger);} .toast.info .tti{color:#42a5f5;}
+        @keyframes tIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+        @keyframes tOut{from{transform:translateX(0);opacity:1}to{transform:translateX(110%);opacity:0}}
+
+        /* ── Responsive ── */
+        @media(max-width:768px){
+            .sidebar{position:absolute;z-index:100;height:100%;}
+            .sidebar.collapsed{width:0;}
+            .idx{padding:24px 20px;}
+            .idx-hero h1{font-size:34px;}
+            .sg{grid-template-columns:repeat(2,1fr);}
+            .spg{padding:24px 20px;}
+        }
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
+    </style>
+</head>
+<body>
+
+<!-- Tab Bar -->
+<nav class="tab-bar" role="tablist" aria-label="Browser tabs">
+    <div class="tab active" data-page="index" role="tab" tabindex="0" aria-selected="true" onclick="switchTab('index')">
+        <i class="fa-solid fa-house ti"></i><span>Index</span>
+    </div>
+    <div class="tab" data-page="home" role="tab" tabindex="0" aria-selected="false" onclick="switchTab('home')">
+        <i class="fa-solid fa-globe ti"></i><span>Home</span>
+    </div>
+    <div class="tab" data-page="settings" role="tab" tabindex="0" aria-selected="false" onclick="switchTab('settings')">
+        <i class="fa-solid fa-gear ti"></i><span>Settings</span>
+    </div>
+    <div class="tab-add" title="New Tab" onclick="showToast('New tab feature coming soon','info')"><i class="fa-solid fa-plus"></i></div>
+</nav>
+
+<!-- Toolbar -->
+<div class="toolbar" role="toolbar" aria-label="Navigation toolbar">
+    <button class="nav-btn disabled" id="backBtn" onclick="goBack()" title="Back" aria-label="Go back"><i class="fa-solid fa-chevron-left"></i></button>
+    <button class="nav-btn disabled" id="fwdBtn" onclick="goForward()" title="Forward" aria-label="Go forward"><i class="fa-solid fa-chevron-right"></i></button>
+    <button class="nav-btn" id="refBtn" onclick="refreshPage()" title="Refresh" aria-label="Refresh page"><i class="fa-solid fa-rotate-right"></i></button>
+    <button class="nav-btn" id="sideBtn" onclick="toggleSidebar()" title="Toggle file panel" aria-label="Toggle sidebar"><i class="fa-solid fa-bars"></i></button>
+    <div class="url-bar">
+        <i class="fa-solid fa-lock ui secure" id="urlSecure"></i>
+        <input type="text" id="urlInput" placeholder="Enter URL or search..." aria-label="Address bar" onkeydown="if(event.key==='Enter')navigateTo()">
+    </div>
+    <button class="go-btn" onclick="navigateTo()">Go</button>
+</div>
+
+<!-- Main -->
+<div class="main-container">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar" aria-label="Project files">
+        <div class="sidebar-header">
+            <span>Project Files</span>
+            <span class="ts" onclick="toggleSidebar()" title="Collapse"><i class="fa-solid fa-chevron-left"></i></span>
+        </div>
+        <div class="file-tree" id="fileTree"></div>
+    </aside>
+
+    <!-- Content -->
+    <main class="content-area">
+
+        <!-- Index -->
+        <section class="page active" id="pageIndex" role="tabpanel">
+            <canvas class="idx-canvas" id="bgCanvas"></canvas>
+            <div class="idx">
+                <div class="idx-hero">
+                    <h1>Browser <span>Clone</span></h1>
+                    <div class="ver">v10.4.9</div>
+                    <p class="sub">By @Browser Clone — Lightweight. Fast. Secure.</p>
+                </div>
+                <div class="sg">
+                    <div class="sc"><div class="sv" data-count="50">0</div><div class="sl">Project Files</div></div>
+                    <div class="sc"><div class="sv" data-count="5">0</div><div class="sl">Modules</div></div>
+                    <div class="sc"><div class="sv" data-count="3">0</div><div class="sl">Pages</div></div>
+                    <div class="sc"><div class="sv" data-count="12">0</div><div class="sl">Protection Layers</div></div>
+                </div>
+                <div class="idx-files">
+                    <h3>All Files</h3>
+                    <div class="chip-grid" id="chipGrid"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Home -->
+        <section class="page" id="pageHome" role="tabpanel">
+            <div class="hpg">
+                <div class="lb" id="loadBar" style="width:0%"></div>
+                <div class="bc" id="browserContent">
+                    <div class="bd" id="browserDefault">
+                        <div class="bl"><i class="fa-solid fa-compass"></i></div>
+                        <h2>Hack by <span>Browser Clone</span> v1</h2>
+                        <p class="tl">Enter a URL above to start browsing</p>
+                        <div class="ql">
+                            <div class="qli" onclick="quickNav('https://example.com')">
+                                <span class="qi" style="background:#42a5f5;color:#fff">E</span>Example.com
+                            </div>
+                            <div class="qli" onclick="quickNav('https://www.w3schools.com')">
+                                <span class="qi" style="background:#04aa6d;color:#fff">W</span>W3Schools
+                            </div>
+                            <div class="qli" onclick="quickNav('https://httpbin.org')">
+                                <span class="qi" style="background:#ff6b35;color:#fff">H</span>httpbin
+                            </div>
+                            <div class="qli" onclick="quickNav('https://developer.mozilla.org')">
+                                <span class="qi" style="background:#1a1a2e;color:#fff"><i class="fa-solid fa-code" style="font-size:8px"></i></span>MDN Docs
+                            </div>
+                        </div>
+                    </div>
+                    <iframe id="browserFrame" style="display:none" sandbox="allow-same-origin allow-scripts allow-forms allow-popups" title="Web content"></iframe>
+                </div>
+            </div>
+        </section>
+
+        <!-- Settings -->
+        <section class="page" id="pageSettings" role="tabpanel">
+            <div class="spg">
+                <h2>Settings</h2>
+                <p class="sd">Configure your Browser Clone environment and security features.</p>
+                <div class="sg2">
+                    <div class="sg2t">Network &amp; Security</div>
+
+                    <div class="si">
+                        <div class="sinfo">
+                            <div class="sicon"><i class="fa-solid fa-server"></i></div>
+                            <div><div class="slabel">Web Server</div><div class="ssub">Enable built-in web server</div></div>
+                        </div>
+                        <label class="toggle"><input type="checkbox" checked data-setting="webServer" onchange="toggleSetting(this)"><span class="sl2"></span></label>
+                    </div>
+
+                    <div class="si">
+                        <div class="sinfo">
+                            <div class="sicon"><i class="fa-solid fa-network-wired"></i></div>
+                            <div><div class="slabel">Host</div><div class="ssub">Configure host resolution</div></div>
+                        </div>
+                        <label class="toggle"><input type="checkbox" checked data-setting="host" onchange="toggleSetting(this)"><span class="sl2"></span></label>
+                    </div>
+
+                    <div class="si">
+                        <div class="sinfo">
+                            <div class="sicon"><i class="fa-solid fa-location-dot"></i></div>
+                            <div><div class="slabel">IP Address</div><div class="ssub">Show IP address information</div></div>
+                        </div>
+                        <label class="toggle"><input type="checkbox" checked data-setting="ipAddress" onchange="toggleSetting(this)"><span class="sl2"></span></label>
+                    </div>
+
+                    <div class="si">
+                        <div class="sinfo">
+                            <div class="sicon"><i class="fa-solid fa-shield-halved"></i></div>
+                            <div><div class="slabel">Advanced DNS</div><div class="ssub">Use advanced DNS resolution</div></div>
+                        </div>
+                        <label class="toggle"><input type="checkbox" checked data-setting="advancedDns" onchange="toggleSetting(this)"><span class="sl2"></span></label>
+                    </div>
+
+                    <div class="si">
+                        <div class="sinfo">
+                            <div class="sicon"><i class="fa-solid fa-clock"></i></div>
+                            <div><div class="slabel">Time To Live</div><div class="ssub">Configure DNS TTL values</div></div>
+                        </div>
+                        <label class="toggle"><input type="checkbox" checked data-setting="ttl" onchange="toggleSetting(this)"><span class="sl2"></span></label>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<!-- Status Bar -->
+<footer class="sbar">
+    <div class="sl3"><div class="sdot"></div><span id="statusText">Ready</span></div>
+    <div class="sr"><span>Browser Clone v10.4.9</span><span id="clock"></span></div>
+</footer>
+
+<!-- Toasts -->
+<div class="tc" id="toastBox"></div>
+
+<script>
+/* ═══════════════════════════════════
+   Data
+═══════════════════════════════════ */
+const FILES = [
+    {n:'Index.html',t:'html'},{n:'Home.html',t:'html'},{n:'Settings.html',t:'html'},
+    {n:'AndroidManifest.xml',t:'xml'},{n:'Style.css',t:'css'},
+    {n:'Content.js',t:'js'},{n:'Background.js',t:'js'},{n:'Main.js',t:'js'},
+    {n:'Protection.js',t:'js'},{n:'Protection.tsx',t:'tsx'},
+    {n:'TCP.json',t:'json'},{n:'TCP.tsx',t:'tsx'},{n:'TCP.js',t:'js'},
+    {n:'WebRequest.js',t:'js'},{n:'WebRequest.tsx',t:'tsx'},{n:'WebRequest.json',t:'json'},
+    {n:'Response.tsx',t:'tsx'},{n:'Response.js',t:'js'},{n:'Response.json',t:'json'},
+    {n:'OS',t:'folder',ch:[
+        {n:'kernel.sys',t:'default'},{n:'drivers.json',t:'json'},{n:'config.xml',t:'xml'}
+    ]},
+    {n:'httprequests.js',t:'js'},{n:'httprequests.json',t:'json'},{n:'httprequests.tsx',t:'tsx'},
+    {n:'Example.tsx',t:'tsx'},{n:'Example.js',t:'js'},
+    {n:'Internet.tsx',t:'tsx'},{n:'Network.tsx',t:'tsx'},
+    {n:'Index.php',t:'default'},{n:'Index.tsx',t:'tsx'},
+    {n:'Web Browser.tsx',t:'tsx'},{n:'Browser.tsx',t:'tsx'},
+    {n:'Frame.tsx',t:'tsx'},{n:'Frame.js',t:'js'},
+    {n:'Browser.js',t:'js'},{n:'Cookies.js',t:'js'},{n:'Cookies.tsx',t:'tsx'},
+    {n:'Browser.py',t:'py'},{n:'Package.tsx',t:'tsx'},
+    {n:'Connected.json',t:'json'},{n:'Web Server.tsx',t:'tsx'},
+    {n:'Advanced DNS.tsx',t:'tsx'},{n:'Domain.tsx',t:'tsx'},
+    {n:'Time to Live.tsx',t:'tsx'},{n:'Network.json',t:'json'},
+    {n:'Malware.tsx',t:'tsx'},{n:'Package.json',t:'json'},{n:'Package.js',t:'js'},
+    {n:'Classes.dex',t:'dex'},{n:'Classes1.dex',t:'dex'},{n:'Classes2.dex',t:'dex'}
+];
+
+const ICONS = {
+    html:'fa-brands fa-html5',css:'fa-brands fa-css3-alt',js:'fa-brands fa-js',
+    tsx:'fa-solid fa-code',json:'fa-solid fa-file-code',xml:'fa-solid fa-file-code',
+    py:'fa-brands fa-python',dex:'fa-solid fa-cube',folder:'fa-solid fa-folder',default:'fa-solid fa-file'
+};
+
+let curPage = 'index';
+let navHist = ['browser-clone://index'];
+let navIdx = 0;
+let settings = {webServer:true,host:true,ipAddress:true,advancedDns:true,ttl:true};
+
+/* ═══════════════════════════════════
+   File Tree
+═══════════════════════════════════ */
+function icon(t){return ICONS[t]||ICONS.default;}
+
+function renderTree(){
+    const el=document.getElementById('fileTree');
+    el.innerHTML='';
+    FILES.forEach(f=>{
+        if(f.t==='folder'){
+            const d=document.createElement('div');
+            d.innerHTML=`
+                <div class="fi" onclick="togFolder(this)">
+                    <span class="fic folder"><i class="${icon('folder')}"></i></span>
+                    <span>${f.n}</span>
+                    <i class="fa-solid fa-chevron-down chev"></i>
+                </div>
+                <div class="fc" style="max-height:${f.ch.length*28}px">
+                    ${f.ch.map(c=>`<div class="fi" style="padding-left:32px" onclick="selFile('${c.n}')">
+                        <span class="fic ${c.t}"><i class="${icon(c.t)}"></i></span><span>${c.n}</span>
+                    </div>`).join('')}
+                </div>`;
+            el.appendChild(d);
+        } else {
+            const active = (f.n==='Index.html'&&curPage==='index')||(f.n==='Home.html'&&curPage==='home')||(f.n==='Settings.html'&&curPage==='settings');
+            const d=document.createElement('div');
+            d.className='fi'+(active?' active':'');
+            d.onclick=()=>selFile(f.n);
+            d.innerHTML=`<span class="fic ${f.t}"><i class="${icon(f.t)}"></i></span><span>${f.n}</span>`;
+            el.appendChild(d);
+        }
+    });
+}
+
+function togFolder(el){
+    const c=el.nextElementSibling, ch=el.querySelector('.chev');
+    c.classList.toggle('col');
+    ch.style.transform=c.classList.contains('col')?'rotate(-90deg)':'rotate(0)';
+}
+
+function selFile(n){
+    if(n==='Index.html')switchTab('index');
+    else if(n==='Home.html')switchTab('home');
+    else if(n==='Settings.html')switchTab('settings');
+    else showToast('Opened '+n,'info');
+}
+
+/* ═══════════════════════════════════
+   Chip Grid (Index Page)
+═══════════════════════════════════ */
+function renderChips(){
+    const g=document.getElementById('chipGrid');
+    g.innerHTML='';
+    FILES.forEach(f=>{
+        if(f.t==='folder')return;
+        const c=document.createElement('span');
+        c.className='chip';
+        c.innerHTML=`<i class="${icon(f.t)}" style="color:var(--accent)"></i>${f.n}`;
+        g.appendChild(c);
+    });
+}
+
+/* ═══════════════════════════════════
+   Tab Navigation
+═══════════════════════════════════ */
+function switchTab(p){
+    curPage=p;
+    document.querySelectorAll('.tab').forEach(t=>{
+        const a=t.dataset.page===p;
+        t.classList.toggle('active',a);
+        t.setAttribute('aria-selected',a);
+    });
+    document.querySelectorAll('.page').forEach(pg=>pg.classList.remove('active'));
+    document.getElementById('page'+p.charAt(0).toUpperCase()+p.slice(1)).classList.add('active');
+
+    const url='browser-clone://'+p;
+    document.getElementById('urlInput').value=url;
+    document.getElementById('urlSecure').className='ui secure fa-solid fa-lock';
+    document.getElementById('statusText').textContent=p.charAt(0).toUpperCase()+p.slice(1)+' page loaded';
+
+    if(navHist[navIdx]!==url){
+        navHist=navHist.slice(0,navIdx+1);
+        navHist.push(url);
+        navIdx=navHist.length-1;
+    }
+    updNav();
+    renderTree();
+
+    // Run count-up on index
+    if(p==='index') runCountUp();
+}
+
+function updNav(){
+    document.getElementById('backBtn').classList.toggle('disabled',navIdx<=0);
+    document.getElementById('fwdBtn').classList.toggle('disabled',navIdx>=navHist.length-1);
+}
+
+function goBack(){
+    if(navIdx>0){navIdx--;navTo(navHist[navIdx]);}
+}
+function goForward(){
+    if(navIdx<navHist.length-1){navIdx++;navTo(navHist[navIdx]);}
+}
+
+function navTo(url){
+    if(url.startsWith('browser-clone://')){
+        switchTab(url.replace('browser-clone://',''));
+    } else {
+        showHome(url);
+    }
+    updNav();
+}
+
+function refreshPage(){
+    if(curPage==='home'){
+        const fr=document.getElementById('browserFrame');
+        if(fr.style.display!=='none'){const s=fr.src;fr.src='';setTimeout(()=>fr.src=s,80);}
+    }
+    showToast('Page refreshed','success');
+}
+
+/* ═══════════════════════════════════
+   Browser Navigation
+═══════════════════════════════════ */
+function navigateTo(){
+    let v=document.getElementById('urlInput').value.trim();
+    if(!v)return;
+    if(v.startsWith('browser-clone://')){switchTab(v.replace('browser-clone://',''));return;}
+    if(!/^https?:\/\//.test(v)){v='https://'+v;document.getElementById('urlInput').value=v;}
+    if(curPage!=='home') showHome(v);
+    else loadUrl(v);
+    navHist=navHist.slice(0,navIdx+1);
+    navHist.push(v);navIdx=navHist.length-1;updNav();
+}
+
+function quickNav(u){document.getElementById('urlInput').value=u;navigateTo();}
+
+function showHome(url){
+    curPage='home';
+    document.querySelectorAll('.tab').forEach(t=>{t.classList.toggle('active',t.dataset.page==='home');t.setAttribute('aria-selected',t.dataset.page==='home');});
+    document.querySelectorAll('.page').forEach(pg=>pg.classList.remove('active'));
+    document.getElementById('pageHome').classList.add('active');
+    document.getElementById('urlInput').value=url;
+    loadUrl(url);
+    renderTree();
+}
+
+function loadUrl(url){
+    const fr=document.getElementById('browserFrame'),dv=document.getElementById('browserDefault'),lb=document.getElementById('loadBar'),si=document.getElementById('urlSecure');
+    si.className=url.startsWith('https://')?'ui secure fa-solid fa-lock':'ui fa-solid fa-triangle-exclamation';
+    if(!url.startsWith('https://'))si.style.color='var(--warning)';else si.style.color='';
+
+    lb.style.width='0%';lb.style.opacity='1';
+    setTimeout(()=>lb.style.width='35%',50);
+    setTimeout(()=>lb.style.width='65%',300);
+    document.getElementById('statusText').textContent='Loading '+url+'...';
+
+    fr.onload=()=>{lb.style.width='100%';setTimeout(()=>{lb.style.opacity='0';lb.style.width='0%';},300);document.getElementById('statusText').textContent='Loaded: '+url;};
+    fr.onerror=()=>{lb.style.opacity='0';showToast('Unable to load — the site may block iframe embedding','error');document.getElementById('statusText').textContent='Failed to load';};
+
+    dv.style.display='none';fr.style.display='block';fr.src=url;
+}
+
+/* ═══════════════════════════════════
+   Sidebar
+═══════════════════════════════════ */
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('collapsed');}
+
+/* ═══════════════════════════════════
+   Settings
+═══════════════════════════════════ */
+function toggleSetting(el){
+    const k=el.dataset.setting;
+    settings[k]=el.checked;
+    try{localStorage.setItem('bcSettings',JSON.stringify(settings));}catch(e){}
+    const label=el.closest('.si').querySelector('.slabel').textContent;
+    showToast(label+(el.checked?' enabled':' disabled'),'success');
+}
+
+function loadSettings(){
+    try{
+        const s=localStorage.getItem('bcSettings');
+        if(s){settings=JSON.parse(s);document.querySelectorAll('.toggle input').forEach(i=>{const k=i.dataset.setting;if(k in settings)i.checked=settings[k];});}
+    }catch(e){}
+}
+
+/* ═══════════════════════════════════
+   Toast
+═══════════════════════════════════ */
+function showToast(msg,type='info'){
+    const c=document.getElementById('toastBox'),t=document.createElement('div');
+    t.className='toast '+type;
+    const ic={success:'fa-circle-check',error:'fa-circle-xmark',info:'fa-circle-info'};
+    t.innerHTML=`<i class="fa-solid ${ic[type]||ic.info} tti"></i><span>${msg}</span>`;
+    c.appendChild(t);
+    setTimeout(()=>{t.style.animation='tOut .3s ease forwards';setTimeout(()=>t.remove(),300);},3000);
+}
+
+/* ═══════════════════════════════════
+   Count-Up Animation
+═══════════════════════════════════ */
+let countUpRan=false;
+function runCountUp(){
+    if(countUpRan)return;countUpRan=true;
+    document.querySelectorAll('.sv[data-count]').forEach(el=>{
+        const target=parseInt(el.dataset.count,10);
+        const start=performance.now(),dur=1400;
+        (function tick(now){
+            const p=Math.min((now-start)/dur,1);
+            const e=1-Math.pow(1-p,3);
+            el.textContent=Math.round(target*e);
+            if(p<1)requestAnimationFrame(tick);
+        })(start);
+    });
+}
+
+/* ═══════════════════════════════════
+   Particle Canvas (Index Page)
+═══════════════════════════════════ */
+function initCanvas(){
+    const cv=document.getElementById('bgCanvas'),cx=cv.getContext('2d');
+    let pts=[],w,h;
+    function resize(){w=cv.width=cv.parentElement.offsetWidth;h=cv.height=cv.parentElement.offsetHeight;seed();}
+    function seed(){
+        pts=[];
+        const n=Math.min(Math.floor(w*h/9000),120);
+        for(let i=0;i<n;i++) pts.push({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,r:Math.random()*1.3+.5});
+    }
+    function draw(){
+        cx.clearRect(0,0,w,h);
+        for(const p of pts){
+            p.x+=p.vx;p.y+=p.vy;
+            if(p.x<0)p.x=w;if(p.x>w)p.x=0;if(p.y<0)p.y=h;if(p.y>h)p.y=0;
+            cx.beginPath();cx.arc(p.x,p.y,Math.max(.4,p.r),0,Math.PI*2);cx.fillStyle='#00e896';cx.fill();
+        }
+        for(let i=0;i<pts.length;i++){
+            for(let j=i+1;j<pts.length;j++){
+                const dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.sqrt(dx*dx+dy*dy);
+                if(d<110){cx.beginPath();cx.moveTo(pts[i].x,pts[i].y);cx.lineTo(pts[j].x,pts[j].y);cx.strokeStyle='rgba(0,232,150,'+(0.12*(1-d/110))+')';cx.lineWidth=.5;cx.stroke();}
+            }
+        }
+        requestAnimationFrame(draw);
+    }
+    resize();draw();
+    window.addEventListener('resize',resize);
+}
+
+/* ═══════════════════════════════════
+   Clock
+═══════════════════════════════════ */
+function tick(){const d=new Date();document.getElementById('clock').textContent=[d.getHours(),d.getMinutes(),d.getSeconds()].map(v=>String(v).padStart(2,'0')).join(':');}
+
+/* ═══════════════════════════════════
+   Keyboard Nav for Tabs
+═══════════════════════════════════ */
+document.querySelectorAll('.tab').forEach(t=>{
+    t.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();t.click();}});
+});
+
+/* ═══════════════════════════════════
+   Init
+═══════════════════════════════════ */
+document.addEventListener('DOMContentLoaded',()=>{
+    renderTree();
+    renderChips();
+    loadSettings();
+    initCanvas();
+    tick();setInterval(tick,1000);
+    document.getElementById('urlInput').value='browser-clone://index';
+    runCountUp();
+});
+</script>
+</body>
+</html>
